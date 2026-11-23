@@ -40,7 +40,15 @@ jobs:
       - name: Instalar dependencias
         run: npm ci   # versiones exactas de package-lock.json
 
+      - name: Tests unitarios con cobertura
+        run: npx ng test --watch=false --coverage
 
+      - name: Subir informe de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-cobertura
+          path: coverage/
 
       - name: Compilar Angular
         run: npx ng build --base-href /cicd-angular/
