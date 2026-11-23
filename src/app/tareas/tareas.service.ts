@@ -41,4 +41,22 @@ export class TareasService {
   pendientes(): number {
     return this.tareas.filter(t => !t.completada).length;
   }
+    filtrar(texto: string): Tarea[] {
+    if (!texto) { return this.listar(); }
+    if (texto.length < 2) { return []; }
+    return this.tareas.filter(t => t.titulo.toLowerCase().includes(texto.toLowerCase()));
+  }
+
+  vaciar(): void {
+    this.tareas = [];
+    this.siguienteId = 1;
+  }
+
+  completarTodas(): void {
+    this.tareas.forEach(t => (t.completada = true));
+  }
+
+  ordenarPorTitulo(): Tarea[] {
+    return [...this.tareas].sort((a, b) => a.titulo.localeCompare(b.titulo));
+  }
 }
