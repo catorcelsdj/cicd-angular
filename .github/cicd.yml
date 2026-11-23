@@ -1,0 +1,99 @@
+# ================================================================
+#  Práctica 4 · CI/CD de un proyecto Angular con GitHub Actions
+#  Cambia "cicd-angular" por el nombre EXACTO de tu repositorio
+#  (aparece en --base-href y en la ruta de dist/).
+# ================================================================
+name: Angular CI/CD
+
+# on: define CUÁNDO se ejecuta el workflow.
+#  - pull_request contra main -> solo CI (comprobar que compila y, en la
+#    extensión, que pasan los tests con cobertura suficiente).
+#  - push a main (p. ej. al fusionar una PR) -> CI + despliegue (CD).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# jobs: cada job se ejecuta en una máquina virtual limpia.
+jobs:
+
+  # ---------------------------------------------------------------
+  # JOB 1 · build (Integración Continua)
+  # ---------------------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+    # permissions: mínimo necesario. Solo leer el código del repo.
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node 22 (con caché de npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci   # versiones exactas de package-lock.json
+
+      # --- EXTENSIÓN (tests + cobertura) ---------------------------
+      # Si NO haces la extensión, borra estos dos pasos.
+      # Los tests van ANTES del build. Si un test falla o la cobertura
+      # no llega al umbral (definido en karma.conf.js), el job falla.
+      - name: Tests unitarios con cobertura
+        run: npx ng test --watch=false --browsers=ChromeHeadlessCI --code-coverage
+
+      - name: Subir informe de cobertura
+        if: always()   # se sube aunque los tests fallen, para poder revisarlo
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-cobertura
+          path: coverage/
+      # -------------------------------------------------------------
+
+      - name: Compilar Angular
+        run: npx ng build --base-href /cicd-angular/
+
+      # GitHub Pages no conoce las rutas de Angular: si alguien entra
+      # directamente en /cicd-angular/otra-ruta devolvería 404.
+      # Copiando index.html como 404.html el router de Angular lo resuelve.
+      - name: Copiar index.html como 404.html (rutas SPA)
+        if: github.event_name == 'push'
+        run: cp dist/cicd-angular/browser/index.html dist/cicd-angular/browser/404.html
+
+      # if: solo se publica el artefacto en un push (en una PR no se despliega).
+      - name: Subir artefacto para GitHub Pages
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/cicd-angular/browser
+
+  # ---------------------------------------------------------------
+  # JOB 2 · deploy (Despliegue Continuo)
+  # ---------------------------------------------------------------
+  deploy:
+    # needs: no empieza hasta que build termine CON ÉXITO.
+    needs: build
+    # if: solo en push a main, nunca en una pull request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # permissions: los mínimos que exige deploy-pages.
+    #  - pages: write    -> publicar en GitHub Pages
+    #  - id-token: write -> token OIDC que verifica que el despliegue
+    #                       viene de este workflow
+    permissions:
+      pages: write
+      id-token: write
+    # environment: entorno github-pages; su URL aparece en Actions.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
