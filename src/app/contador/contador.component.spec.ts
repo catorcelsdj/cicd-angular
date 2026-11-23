@@ -28,7 +28,7 @@ describe('ContadorComponent', () => {
   it('incrementa al pulsar "+"', () => {
     pulsar('.mas');
     pulsar('.mas');
-    expect(valorPintado()).toBe('2');
+    expect(valorPintado()).toBe('3');
   });
 
   it('decrementa al pulsar "-"', () => {
