@@ -40,20 +40,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci   # versiones exactas de package-lock.json
 
-      # --- EXTENSIÓN (tests + cobertura) ---------------------------
-      # Si NO haces la extensión, borra estos dos pasos.
-      # Los tests van ANTES del build. Si un test falla o la cobertura
-      # no llega al umbral (definido en karma.conf.js), el job falla.
-      - name: Tests unitarios con cobertura
-        run: npx ng test --watch=false --browsers=ChromeHeadlessCI --code-coverage
 
-      - name: Subir informe de cobertura
-        if: always()   # se sube aunque los tests fallen, para poder revisarlo
-        uses: actions/upload-artifact@v4
-        with:
-          name: informe-cobertura
-          path: coverage/
-      # -------------------------------------------------------------
 
       - name: Compilar Angular
         run: npx ng build --base-href /cicd-angular/
