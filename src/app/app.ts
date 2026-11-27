@@ -11,4 +11,5 @@ import { ContadorComponent } from './contador/contador.component';
 })
 export class App {
   protected readonly title = signal('cicd-angular');
+    demo: number = variableQueNoExiste;
 }
